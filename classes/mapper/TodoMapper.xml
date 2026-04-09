@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.todo.mapper.TodoMapper">
+
+    <resultMap id="TodoResultMap" type="com.example.todo.model.Todo">
+        <id property="id" column="id" />
+        <result property="title" column="title" />
+        <result property="completed" column="completed" />
+        <result property="priority" column="priority" />
+        <result property="userId" column="user_id" />
+        <result property="deadline" column="deadline" />
+        <result property="createdBy" column="created_by" />
+        <result property="createdAt" column="created_at" />
+        <result property="categoryId" column="category_id" />
+        <association property="category" javaType="com.example.todo.model.Category">
+            <id property="id" column="category_id" />
+            <result property="name" column="category_name" />
+            <result property="color" column="category_color" />
+        </association>
+    </resultMap>
+
+    <select id="findAll" resultMap="TodoResultMap">
+        SELECT
+            t.id, t.title, t.completed, t.priority, t.user_id, t.deadline, t.category_id, t.created_by, t.created_at,
+            c.name AS category_name, c.color AS category_color
+        FROM todos t
+        LEFT JOIN categories c ON t.category_id = c.id
+        ORDER BY t.id
+    </select>
+
+    <select id="findAllByUserId" resultMap="TodoResultMap">
+        SELECT
+            t.id, t.title, t.completed, t.priority, t.user_id, t.deadline, t.category_id, t.created_by, t.created_at,
+            c.name AS category_name, c.color AS category_color
+        FROM todos t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE t.user_id = #{userId}
+        ORDER BY t.id
+    </select>
+
+    <select id="findIncompleteByDeadlineRange" resultMap="TodoResultMap">
+        SELECT
+            t.id, t.title, t.completed, t.priority, t.user_id, t.deadline, t.category_id, t.created_by, t.created_at,
+            c.name AS category_name, c.color AS category_color
+        FROM todos t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE t.completed = FALSE
+          AND t.user_id IS NOT NULL
+          AND t.deadline IS NOT NULL
+          AND t.deadline BETWEEN #{startDate} AND #{endDate}
+        ORDER BY t.deadline, t.id
+    </select>
+
+    <select id="findPage" resultMap="TodoResultMap">
+        SELECT
+            t.id, t.title, t.completed, t.priority, t.user_id, t.deadline, t.category_id, t.created_by, t.created_at,
+            c.name AS category_name, c.color AS category_color
+        FROM todos t
+        LEFT JOIN categories c ON t.category_id = c.id
+        <where>
+            t.user_id = #{userId}
+            <if test="categoryId != null">
+                AND t.category_id = #{categoryId}
+            </if>
+        </where>
+        ORDER BY
+        <choose>
+            <when test="sortByDeadline">
+                CASE WHEN t.deadline IS NULL THEN 1 ELSE 0 END,
+                t.deadline,
+                t.id
+            </when>
+            <when test="sortByPriority">
+                CASE t.priority
+                    WHEN 'HIGH' THEN 1
+                    WHEN 'MEDIUM' THEN 2
+                    WHEN 'LOW' THEN 3
+                    ELSE 2
+                END,
+                t.id
+            </when>
+            <otherwise>t.id</otherwise>
+        </choose>
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findPageForAdmin" resultMap="TodoResultMap">
+        SELECT
+            t.id, t.title, t.completed, t.priority, t.user_id, t.deadline, t.category_id, t.created_by, t.created_at,
+            c.name AS category_name, c.color AS category_color
+        FROM todos t
+        LEFT JOIN categories c ON t.category_id = c.id
+        <where>
+            <if test="categoryId != null">
+                t.category_id = #{categoryId}
+            </if>
+        </where>
+        ORDER BY
+        <choose>
+            <when test="sortByDeadline">
+                CASE WHEN t.deadline IS NULL THEN 1 ELSE 0 END,
+                t.deadline,
+                t.id
+            </when>
+            <when test="sortByPriority">
+                CASE t.priority
+                    WHEN 'HIGH' THEN 1
+                    WHEN 'MEDIUM' THEN 2
+                    WHEN 'LOW' THEN 3
+                    ELSE 2
+                END,
+                t.id
+            </when>
+            <otherwise>t.id</otherwise>
+        </choose>
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*)
+        FROM todos t
+        <where>
+            t.user_id = #{userId}
+            <if test="categoryId != null">
+                AND t.category_id = #{categoryId}
+            </if>
+        </where>
+    </select>
+
+    <select id="countAllForAdmin" resultType="long">
+        SELECT COUNT(*)
+        FROM todos t
+        <where>
+            <if test="categoryId != null">
+                t.category_id = #{categoryId}
+            </if>
+        </where>
+    </select>
+
+    <select id="findById" resultMap="TodoResultMap">
+        SELECT
+            t.id, t.title, t.completed, t.priority, t.user_id, t.deadline, t.category_id, t.created_by, t.created_at,
+            c.name AS category_name, c.color AS category_color
+        FROM todos t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE t.id = #{id}
+    </select>
+
+    <select id="findByIdAndUserId" resultMap="TodoResultMap">
+        SELECT
+            t.id, t.title, t.completed, t.priority, t.user_id, t.deadline, t.category_id, t.created_by, t.created_at,
+            c.name AS category_name, c.color AS category_color
+        FROM todos t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE t.id = #{id}
+          AND t.user_id = #{userId}
+    </select>
+
+    <select id="existsById" resultType="int">
+        SELECT COUNT(*)
+        FROM todos
+        WHERE id = #{id}
+    </select>
+
+    <select id="countByIdAndUserId" resultType="int">
+        SELECT COUNT(*)
+        FROM todos
+        WHERE id = #{id}
+          AND user_id = #{userId}
+    </select>
+
+    <insert id="insert" parameterType="com.example.todo.model.Todo"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO todos (title, completed, priority, user_id, deadline, category_id, created_by, created_at)
+        VALUES (#{title}, #{completed}, #{priority}, #{userId}, #{deadline}, #{categoryId}, #{createdBy}, #{createdAt})
+    </insert>
+
+    <delete id="deleteById">
+        DELETE FROM todos
+        WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteByIdAndUserId">
+        DELETE FROM todos
+        WHERE id = #{id}
+          AND user_id = #{userId}
+    </delete>
+
+    <delete id="deleteByIds">
+        DELETE FROM todos
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <delete id="deleteByIdsAndUserId">
+        DELETE FROM todos
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+          AND user_id = #{userId}
+    </delete>
+
+    <update id="updateById" parameterType="com.example.todo.model.Todo">
+        UPDATE todos
+        SET title = #{title},
+            completed = #{completed},
+            priority = #{priority},
+            deadline = #{deadline},
+            category_id = #{categoryId}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateByIdAndUserId" parameterType="com.example.todo.model.Todo">
+        UPDATE todos
+        SET title = #{title},
+            completed = #{completed},
+            priority = #{priority},
+            deadline = #{deadline},
+            category_id = #{categoryId}
+        WHERE id = #{id}
+          AND user_id = #{userId}
+    </update>
+
+    <update id="assignUnownedTodosToUser">
+        UPDATE todos
+        SET user_id = #{userId}
+        WHERE user_id IS NULL
+    </update>
+
+    <delete id="deleteByUserId">
+        DELETE FROM todos
+        WHERE user_id = #{userId}
+    </delete>
+
+</mapper>
